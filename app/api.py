@@ -6,49 +6,109 @@ import joblib
 app = FastAPI()
 
 
-# Cargar el modelo entrenado
-modelo = joblib.load("models/modelo.pkl")
+# ==========================
+# CARGA DE MODELOS
+# ==========================
+
+modelo_blue = joblib.load("models/modelo.pkl")
+modelo_green = joblib.load("models/modelo_nuevo.pkl")
+
+# Modelo activo en producción
+ACTIVE_MODEL = "BLUE"
 
 
-# Definir la estructura de entrada usando Pydantic
+# ==========================
+# CLASE DE ENTRADA
+# ==========================
+
 class Entrada(BaseModel):
     dia: int
 
 
-# 1. GET: Consultar estado de la API
+# ==========================
+# ESTADO DEL SERVICIO
+# ==========================
+
 @app.get("/")
 def inicio():
-    return {"estado": "activo"}
+    return {
+        "estado": "activo",
+        "modelo_activo": ACTIVE_MODEL
+    }
 
 
-# 2. POST: Hacer predicciones enviando JSON
+# ==========================
+# PREDICCION
+# ==========================
+
 @app.post("/predict")
 def predict(datos: Entrada):
-    resultado = modelo.predict([[datos.dia]])
+
+    if ACTIVE_MODEL == "BLUE":
+        resultado = modelo_blue.predict([[datos.dia]])
+    else:
+        resultado = modelo_green.predict([[datos.dia]])
 
     return {
+        "modelo_utilizado": ACTIVE_MODEL,
         "dia": datos.dia,
         "prediccion": float(resultado[0])
     }
 
 
-# 3. PUT: Actualizar o recargar el modelo en memoria
-@app.put("/reload-model")
-def reload_model():
-    global modelo
+# ==========================
+# SWITCH BLUE-GREEN
+# ==========================
 
-    modelo = joblib.load("models/modelo.pkl")
+@app.put("/switch/{color}")
+def switch_model(color: str):
+
+    global ACTIVE_MODEL
+
+    color = color.upper()
+
+    if color not in ["BLUE", "GREEN"]:
+        return {
+            "error": "Debe elegir BLUE o GREEN"
+        }
+
+    ACTIVE_MODEL = color
 
     return {
-        "mensaje": "Modelo recargado exitosamente en memoria"
+        "mensaje": f"Producción ahora utiliza {ACTIVE_MODEL}"
     }
 
 
-# 4. DELETE: Simular la deshabilitación del servicio
-# o liberación de recursos
+# ==========================
+# RECARGAR MODELOS
+# ==========================
+
+@app.put("/reload-model")
+def reload_model():
+
+    global modelo_blue
+    global modelo_green
+
+    modelo_blue = joblib.load(
+        "models/modelo.pkl"
+    )
+
+    modelo_green = joblib.load(
+        "models/modelo_nuevo.pkl"
+    )
+
+    return {
+        "mensaje": "Modelos recargados correctamente"
+    }
+
+
+# ==========================
+# RESET
+# ==========================
+
 @app.delete("/reset")
 def reset_service():
 
     return {
-        "mensaje": "Recursos de la sesión reiniciados correctamente"
+        "mensaje": "Recursos reiniciados"
     }
