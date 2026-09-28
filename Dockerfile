@@ -1,15 +1,11 @@
-FROM python:3.11-slim
+FROM python:3.11
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
 COPY . .
 
-# Garantiza que el modelo exista dentro de la imagen.
-RUN python src/train.py
+RUN pip install -r requirements.txt
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn","app.api:app","--host","0.0.0.0","--port","8000"]
