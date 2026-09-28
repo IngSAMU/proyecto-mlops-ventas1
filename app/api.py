@@ -1,54 +1,54 @@
-"""
-Primer servicio de IA para predicción de ventas mediante FastAPI.
-"""
-from pathlib import Path
-
+from fastapi import FastAPI
+from pydantic import BaseModel
 import joblib
-import pandas as pd
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-
-BASE_DIR = Path(__file__).resolve().parents[1]
-MODEL_PATH = BASE_DIR / "models" / "modelo.pkl"
-
-app = FastAPI(
-    title="API de Predicción de Ventas",
-    description="Servicio de IA para estimar ventas a partir del número de día.",
-    version="1.0.0",
-)
 
 
-def cargar_modelo():
-    if not MODEL_PATH.exists():
-        raise RuntimeError(
-            "No se encontró models/modelo.pkl. Ejecute primero: python src/train.py"
-        )
-    return joblib.load(MODEL_PATH)
+app = FastAPI()
 
 
-modelo = cargar_modelo()
+# Cargar el modelo entrenado
+modelo = joblib.load("models/modelo.pkl")
 
 
+# Definir la estructura de entrada usando Pydantic
 class Entrada(BaseModel):
-    dia: int = Field(gt=0, description="Número de día para realizar la predicción")
+    dia: int
 
 
+# 1. GET: Consultar estado de la API
 @app.get("/")
 def inicio():
-    return {"mensaje": "Servidor IA activo", "estado": "activo"}
+    return {"estado": "activo"}
 
 
-@app.get("/predict")
-def predict_get(dia: int):
-    if dia <= 0:
-        raise HTTPException(status_code=400, detail="El día debe ser mayor que 0")
-    entrada = pd.DataFrame({"dia": [dia]})
-    resultado = modelo.predict(entrada)
-    return {"dia": dia, "prediccion": float(resultado[0])}
-
-
+# 2. POST: Hacer predicciones enviando JSON
 @app.post("/predict")
-def predict_post(data: Entrada):
-    entrada = pd.DataFrame({"dia": [data.dia]})
-    resultado = modelo.predict(entrada)
-    return {"dia": data.dia, "prediccion": float(resultado[0])}
+def predict(datos: Entrada):
+    resultado = modelo.predict([[datos.dia]])
+
+    return {
+        "dia": datos.dia,
+        "prediccion": float(resultado[0])
+    }
+
+
+# 3. PUT: Actualizar o recargar el modelo en memoria
+@app.put("/reload-model")
+def reload_model():
+    global modelo
+
+    modelo = joblib.load("models/modelo.pkl")
+
+    return {
+        "mensaje": "Modelo recargado exitosamente en memoria"
+    }
+
+
+# 4. DELETE: Simular la deshabilitación del servicio
+# o liberación de recursos
+@app.delete("/reset")
+def reset_service():
+
+    return {
+        "mensaje": "Recursos de la sesión reiniciados correctamente"
+    }
