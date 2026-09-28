@@ -1,3 +1,6 @@
+"""
+Primer servicio de IA para predicción de ventas mediante FastAPI.
+"""
 from pathlib import Path
 
 import joblib
