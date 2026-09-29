@@ -169,6 +169,7 @@ def predict(datos: Entrada):
     }
 
 
+
 # ==========================
 # SWITCH BLUE-GREEN
 # ==========================
@@ -185,13 +186,21 @@ def switch_model(color: str):
             "error": "Debe elegir BLUE o GREEN"
         }
 
+    # Guardar el modelo que estaba activo
+    modelo_anterior = ACTIVE_MODEL
+
+    # Cambiar el modelo activo
     ACTIVE_MODEL = color
+
+    # Registrar el cambio en deployment.log
+    deploy_logger.info(
+        f"{datetime.now()} | "
+        f"{modelo_anterior} -> {ACTIVE_MODEL}"
+    )
 
     return {
         "mensaje": f"Producción ahora utiliza {ACTIVE_MODEL}"
     }
-
-
 # ==========================
 # RECARGAR MODELOS
 # ==========================
@@ -215,9 +224,21 @@ def reload_model():
     }
 
 
-# ==========================
-# RESET
-# ==========================
+# ===================================================
+# RESET DEL SERVICIO
+# ===================================================
+
+@app.delete("/reset")
+def reset_service():
+
+    global TOTAL_REQUESTS
+
+    TOTAL_REQUESTS = 0
+
+    return {
+        "mensaje": "Recursos reiniciados correctamente",
+        "total_predicciones": TOTAL_REQUESTS
+    }
 
 # ===================================================
 # MÉTRICAS BÁSICAS
